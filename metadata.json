@@ -1,6 +1,6 @@
 {
   "name": "unrulyv-anaconda",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": "linhgb@gmail.com",
   "summary": "Manages anaconda scientific python, forked from https://github.com/bkreider/puppet-anaconda",
   "license": "Apache 2.0",
