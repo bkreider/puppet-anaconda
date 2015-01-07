@@ -43,13 +43,13 @@ Puppet::Type.type(:package).provide :conda_pip,
 
   has_feature :installable, :uninstallable, :upgradeable, :versionable
   
-  @@install_path = "/opt/anaconda"
-  @@pip_cmd      = "#{@@install_path}/bin/pip"
-  @@conda_cmd    = "#{@@install_path}/bin/conda"
-  @@env_path     = "#{@@install_path}/envs"
-  commands :pip  => @@pip_cmd
+  @install_path = "/opt/anaconda"
+  @pip_cmd      = "#{@install_path}/bin/pip"
+  @conda_cmd    = "#{@install_path}/bin/conda"
+  @env_path     = "#{@install_path}/envs"
+  commands :pip  => @pip_cmd
   
-  @@env_delim = "::"
+  @env_delim = "::"
 
   # Parse lines of output from `pip freeze`, which are structured as
   # _package_==_version_.
@@ -80,7 +80,7 @@ Puppet::Type.type(:package).provide :conda_pip,
       #puts "storing #{record[:name].downcase}"
     end
     
-    execpipe "#{@@pip_cmd} freeze" do |process|
+    execpipe "#{@pip_cmd} freeze" do |process|
       process.collect do |line|
         next unless options = parse(line)
         
@@ -95,10 +95,10 @@ Puppet::Type.type(:package).provide :conda_pip,
     end
     
     # Check for envs
-    execpipe "ls #{@@env_path}" do |env_names|
+    execpipe "ls #{@env_path}" do |env_names|
       env_names.collect do |temp_env|
         env = temp_env.strip
-        execpipe "#{@@env_path}/#{env}/bin/pip freeze" do |process|
+        execpipe "#{@env_path}/#{env}/bin/pip freeze" do |process|
           process.collect do |line|
             next unless options = parse(line, env)
             
@@ -186,7 +186,7 @@ Puppet::Type.type(:package).provide :conda_pip,
       
         # Does env exist?
         found = false
-        execpipe "ls #{@@env_path}" do |env_names|
+        execpipe "ls #{@env_path}" do |env_names|
           env_names.collect do |temp_env|
             fs_env = temp_env.strip
             if fs_env == env
@@ -203,7 +203,7 @@ Puppet::Type.type(:package).provide :conda_pip,
         end
         
         #puts "changing pip to use env"
-        env_pip = "#{@@env_path}/#{env}/bin/pip"
+        env_pip = "#{@env_path}/#{env}/bin/pip"
         #self.class.commands :pip => env_pip  <=== this doesn't seem to work
         Puppet.debug "Calling pip with env: #{env_pip} #{args.join(' ')}"
         self.execute("#{env_pip} #{args.join(' ')}")
@@ -227,7 +227,7 @@ Puppet::Type.type(:package).provide :conda_pip,
     # Envs use their own pip binary
     if not env.nil?
         #puts "changing pip to use env"
-        env_pip = "#{@@env_path}/#{env}/bin/pip"
+        env_pip = "#{@env_path}/#{env}/bin/pip"
         #self.class.commands :pip => env_pip  <=== this doesn't seem to work
         Puppet.debug "Calling pip with env: #{env_pip} #{args.join(' ')}"
         self.execute("#{env_pip} #{args.join(' ')}")
@@ -262,7 +262,7 @@ Puppet::Type.type(:package).provide :conda_pip,
     # env = nil if it is the root env
       
     # If env delim not found, first entry is the package name
-    env, delim, package = name.partition(@@env_delim)
+    env, delim, package = name.partition(@env_delim)
     if delim == ""
       # root package
       package = env
@@ -308,7 +308,7 @@ Puppet::Type.type(:package).provide :conda_pip,
   private
   def self.conda_instances
     packages = []
-    execpipe "#{@@conda_cmd} list -c || /bin/true" do |process|
+    execpipe "#{@conda_cmd} list -c || /bin/true" do |process|
       process.collect do |line|
         next unless options = conda_parse(line)
         packages << options
@@ -316,10 +316,10 @@ Puppet::Type.type(:package).provide :conda_pip,
     end
     
     # Check for envs
-    execpipe "ls #{@@env_path}" do |env_names|
+    execpipe "ls #{@env_path}" do |env_names|
       env_names.collect do |temp_env|
         env = temp_env.strip
-        execpipe "#{@@conda_cmd} list -c -n #{env} || /bin/true" do |process|
+        execpipe "#{@conda_cmd} list -c -n #{env} || /bin/true" do |process|
           process.collect do |line|
             next unless options = conda_parse(line, env)
             packages << options

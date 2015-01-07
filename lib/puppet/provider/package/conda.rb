@@ -8,12 +8,12 @@ Puppet::Type.type(:package).provide :conda,
 
     has_feature :installable, :uninstallable, :upgradeable, :versionable
 
-    @@install_path = "/opt/anaconda"
-    @@conda_cmd    = "#{@@install_path}/bin/conda"
-    @@env_path     = "#{@@install_path}/envs"
-    commands :conda => @@conda_cmd
+    @install_path = "/opt/anaconda"
+    @conda_cmd    = "#{@install_path}/bin/conda"
+    @env_path     = "#{@install_path}/envs"
+    commands :conda => @conda_cmd
     
-    @@env_delim = "::"
+    @env_delim = "::"
     
     def self.parse(line, env="")
         # Need a right split, because package names can contain "-"
@@ -40,7 +40,7 @@ Puppet::Type.type(:package).provide :conda,
         packages = []
         
         # bug where conda list gives an error return value
-        execpipe "#{@@conda_cmd} list -c || /bin/true" do |process|
+        execpipe "#{@conda_cmd} list -c || /bin/true" do |process|
             process.collect do |line|
                 next unless options = parse(line)
                 #puts "Storing options: #{options}"
@@ -49,13 +49,13 @@ Puppet::Type.type(:package).provide :conda,
         end
         
         # Check for envs
-        execpipe "ls #{@@env_path}" do |env_names|
+        execpipe "ls #{@env_path}" do |env_names|
             env_names.collect do |temp_env|
                 env = temp_env.strip
                 #puts "Working on env:#{env}<<"
                 
                 # bug where conda list gives an error return value
-                execpipe "#{@@conda_cmd} list -c -n #{env} || /bin/true" do |process|
+                execpipe "#{@conda_cmd} list -c -n #{env} || /bin/true" do |process|
                     process.collect do |line|
                         next unless options = parse(line, env)
                         #puts "Storing options: #{options}"
@@ -93,7 +93,7 @@ Puppet::Type.type(:package).provide :conda,
         if not env.nil?
             # Verify ENV exists
             found = false
-            execpipe "ls #{@@env_path}" do |env_names|
+            execpipe "ls #{@env_path}" do |env_names|
                 env_names.collect do |temp_env|
                     fs_env = temp_env.strip
                     if fs_env == env
@@ -152,7 +152,7 @@ Puppet::Type.type(:package).provide :conda,
         
         versions = []
         # todo: support other python versions
-        command = "#{@@conda_cmd} #{args.join(' ')} || /bin/true"
+        command = "#{@conda_cmd} #{args.join(' ')} || /bin/true"
         #puts command
         execpipe command do |process|
             process.collect do |line|
@@ -186,7 +186,7 @@ Puppet::Type.type(:package).provide :conda,
         # env = nil if it is the root env
         
         # If env delim not found, first entry is the package name
-        env, delim, package = name.partition(@@env_delim)
+        env, delim, package = name.partition(@env_delim)
         if delim == ""
            # root package
            package = env
