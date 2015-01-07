@@ -1,4 +1,4 @@
-# == Class: conda::instal
+# == Class: conda::install
 #
 # Internal class that does the installation work
 class conda::install {
