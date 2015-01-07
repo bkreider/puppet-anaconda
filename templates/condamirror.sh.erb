@@ -10,12 +10,10 @@ V2_BASE="<%= @v2_base %>"
 V3_BASE="<%= @v3_base %>"
 SWITCHES="--no-clobber --no-parent --recursive"
 
+cd $BASE_DIR
+
 # Mirror v2
-mkdir -p "${BASE_DIR}/v2"
-cd "${BASE_DIR}/v2"
 wget $SWITCHES "${BASE_URL}/${V2_BASE}"
 
 # Mirror v3
-mkdir -p "${BASE_DIR}/v3"
-cd "${BASE_DIR}/v3"
 wget $SWITCHES "${BASE_URL}/${V3_BASE}"
