@@ -78,14 +78,14 @@ describe provider do
 
   describe "query" do
 
-    it "should return a hash when nuget and the package are present" do
+    it "should return a hash when conda and the package are present" do
       provider.expects(:is_directory).returns true
       provider.expects(:getversion).returns "1.2.5"
 
       @provider.query.should == {
         :ensure   => "1.2.5",
         :name     => 'c:\temp\nuget\testpackage',
-        :provider => :nuget,
+        :provider => :conda,
       }
 
     end
@@ -112,8 +112,8 @@ describe provider do
       @provider.latest
     end
 
-    it "should query nuget" do
-      provider.expects(:execpipe).with() { |args| args[0] =~ /nuget.exe/ && args[1] == 'list' }
+    it "should query conda" do
+      provider.expects(:execpipe).with() { |args| args[0] =~ /conda.exe/ && args[1] == 'list' }
       @provider.latest
     end
 
@@ -145,7 +145,7 @@ describe provider do
     it "should use prerelease argument" do
       @resource[:flavor] = 'prerelease'
       provider.expects(:execpipe).with() { |arg|
-        arg[0] =~ /nuget.exe/ &&
+        arg[0] =~ /conda.exe/ &&
           arg[1] == 'list' &&
           arg[2] == 'testpackage' &&
           arg[3] == '-prerelease' &&
