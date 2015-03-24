@@ -40,27 +40,147 @@ describe provider do
   end
 
 
+  describe "provider" do
+
+    it "should have windows conda exe set" do
+      provider.expects(:is_windows?).at_least_once.returns true
+      provider.get_conda_cmd.should == 'C:\Anaconda\Scripts\conda.exe'
+    end
+
+    it "should have linux conda exe set" do
+      provider.expects(:is_windows?).at_least_once.returns false
+      provider.get_conda_cmd.should == '/opt/anaconda/bin/conda'
+    end
+
+    it "should have windows envs path set" do
+      provider.expects(:is_windows?).at_least_once.returns true
+      provider.get_env_path.should == 'C:\Anaconda\envs'
+    end
+
+    it "should have linux envs path set" do
+      provider.expects(:is_windows?).at_least_once.returns false
+      provider.get_env_path.should == '/opt/anaconda/envs'
+    end
+
+    it "should know listing for linux" do
+      provider.expects(:is_windows?).at_least_once.returns false
+      provider.get_dir_listing_cmd.should == 'ls -1'
+    end
+
+    it "should know listing for windows" do
+      provider.expects(:is_windows?).at_least_once.returns true
+      provider.get_dir_listing_cmd.should == 'dir /b'
+    end
+
+  end
+
+
   context "parameter :source" do
 
     it "should default to nil" do
       @resource[:source].should be_nil
     end
 
-    it "should accept c:\\packages" do
-      @resource[:source] = 'c:\packages'
-    end
-
     it "should accept http://somelocation/packages" do
       @resource[:source] = 'http://somelocation/packages'
-    end
-
-    it "should get mapped to a -c switch" do
     end
 
   end
 
 
   context "method :instances" do
+
+    it 'should be able to parse package info from conda list output' do
+      provider.parse_conda_list_item("bitarray-0.8.1-py27_1\n").should ==
+        {:ensure => "0.8.1", :name => "bitarray", :provider => :conda}
+    end
+
+    it 'should be able to parse package info from conda list with env output' do
+      provider.parse_conda_list_item("bitarray-0.8.1-py27_1\n","an_env").should ==
+        {:ensure => "0.8.1", :name => "an_env::bitarray", :provider => :conda}
+    end
+
+    it 'should use conda command to enumerate packages' do
+      provider.stubs(:is_windows?).returns true
+      provider.expects(:execpipe).with('C:\Anaconda\Scripts\conda.exe list -c').yields(StringIO.new(""))
+      provider.get_instances_from_conda.should == []
+    end
+
+    it 'should use conda command to enumerate environments' do
+      provider.stubs(:is_windows?).returns true
+      provider.expects(:execpipe).with('C:\Anaconda\Scripts\conda.exe list -c -n my_env').
+        yields(StringIO.new(%q[
+bitarray-0.8.1-py27_1
+blaze-0.6.3-np19py27_0
+blz-0.6.2-np19py27_0
+                            ]))
+        provider.stubs(:parse_conda_list_item).with(responds_with(:strip, ""), 'my_env').
+          returns nil
+        provider.expects(:parse_conda_list_item).with("bitarray-0.8.1-py27_1\n", 'my_env').
+          returns({:ensure => "0.8.1", :name => "my_env::bitarray", :provider => :conda})
+        provider.expects(:parse_conda_list_item).with("blaze-0.6.3-np19py27_0\n", 'my_env').
+          returns({:ensure => "0.6.3", :name => "my_env::blaze", :provider => :conda})
+        provider.expects(:parse_conda_list_item).with("blz-0.6.2-np19py27_0\n", 'my_env').
+          returns({:ensure => "0.6.2", :name => "my_env::blz", :provider => :conda})
+        the_instances = provider.get_instances_from_conda('my_env')
+        the_instances.length.should == 3
+        the_instances[0].name.should == "my_env::bitarray"
+        the_instances[1].name.should == "my_env::blaze"
+        the_instances[2].name.should == "my_env::blz"
+    end
+
+    it 'should enumerate environments' do
+      provider.stubs(:is_windows?).returns true
+      provider.expects(:execpipe).with('dir /b C:\Anaconda\envs').yields(StringIO.new("env1\nenv2\n"))
+      provider.expects(:get_instances_from_conda).with().returns(["fake_package1","fake_package2"])
+      provider.expects(:get_instances_from_conda).with("env1").returns(["env1::fake_package1","env1::fake_package2"])
+      provider.expects(:get_instances_from_conda).with("env2").returns(["env2::fake_package1","env2::fake_package2"])
+      provider.instances.should == ["fake_package1","fake_package2","env1::fake_package1",
+                                    "env1::fake_package2","env2::fake_package1","env2::fake_package2"]
+    end
+
+  end
+
+
+  describe "query" do
+
+    it "should return a hash when package is present" do
+      fake_resource = Object.new
+      fake_resource.class.module_eval { attr_accessor :name}
+      fake_resource.class.module_eval { attr_accessor :properties}
+      fake_resource.name = 'env_name::package_name'
+      fake_resource.properties = 'the resourceproperties'
+
+      provider.expects(:instances).returns [fake_resource]
+      @provider.query.should == fake_resource.properties
+    end
+
+    it "should return a hash when package is in wrong case" do
+      fake_resource = Object.new
+      fake_resource.class.module_eval { attr_accessor :name}
+      fake_resource.class.module_eval { attr_accessor :properties}
+      fake_resource.name = 'env_Name::Package_Name'
+      fake_resource.properties = 'the resourceproperties'
+
+      provider.expects(:instances).returns [fake_resource]
+      @provider.query.should == fake_resource.properties
+    end
+
+    it "should return nil when no packages" do
+      provider.expects(:instances).returns []
+      @provider.query.should be_nil
+    end
+
+    it "should return nil when no matching packages" do
+      fake_resource = Object.new
+      fake_resource.class.module_eval { attr_accessor :name}
+      fake_resource.class.module_eval { attr_accessor :properties}
+      fake_resource.name = 'wrong_env::package_name'
+      fake_resource.properties = 'the resourceproperties'
+
+      provider.expects(:instances).returns [fake_resource]
+      @provider.query.should be_nil
+    end
 
   end
 
@@ -72,88 +192,6 @@ describe provider do
 
 
   describe "when uninstalling" do
-
-  end
-
-
-  describe "query" do
-
-    it "should return a hash when conda and the package are present" do
-      provider.expects(:is_directory).returns true
-      provider.expects(:getversion).returns "1.2.5"
-
-      @provider.query.should == {
-        :ensure   => "1.2.5",
-        :name     => 'c:\temp\nuget\testpackage',
-        :provider => :conda,
-      }
-
-    end
-
-    it "should return nil when the package is missing" do
-      provider.expects(:is_directory).returns true
-      provider.expects(:getversion).returns nil
-      @provider.query.should be_nil
-    end
-
-    it "should return nil when the env is missing" do
-      provider.expects(:is_directory).returns false
-      @provider.query.should be_nil
-    end
-
-  end
-
-
-  describe "when fetching a package list" do
-
-    it "should invoke provider getversioncmd" do
-      provider.expects(:getversioncmd).returns "fake_cmd"
-      provider.expects(:execpipe).with("fake_cmd")
-      @provider.latest
-    end
-
-    it "should query conda" do
-      provider.expects(:execpipe).with() { |args| args[0] =~ /conda.exe/ && args[1] == 'list' }
-      @provider.latest
-    end
-
-    it "should return available package version" do
-      provider.expects(:execpipe).yields(StringIO.new(%Q(testpackage 1.23)))
-      @provider.latest.should == '1.23'
-    end
-
-    it "should return nil on error" do
-      provider.expects(:execpipe).raises(Puppet::ExecutionFailure.new("ERROR!"))
-      @provider.latest.should be_nil
-    end
-
-    it "should return nil on none found" do
-      provider.expects(:execpipe).yields(StringIO.new())
-      @provider.latest.should be_nil
-    end
-
-    it "should return nil on wrong found" do
-      provider.expects(:execpipe).yields(StringIO.new(%Q(testpackage2 1.23\n)))
-      @provider.latest.should be_nil
-    end
-
-    it "shouldn't blow up if no version found" do
-      provider.expects(:execpipe).yields(StringIO.new(%Q(testpackage2 \n)))
-      @provider.latest.should be_nil
-    end
-
-    it "should use prerelease argument" do
-      @resource[:flavor] = 'prerelease'
-      provider.expects(:execpipe).with() { |arg|
-        arg[0] =~ /conda.exe/ &&
-          arg[1] == 'list' &&
-          arg[2] == 'testpackage' &&
-          arg[3] == '-prerelease' &&
-          arg[4] == '| findstr /L ' &&
-          arg[5] == 'testpackage'
-      }
-      @provider.latest
-    end
 
   end
 

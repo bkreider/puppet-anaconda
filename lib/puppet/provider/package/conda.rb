@@ -8,65 +8,86 @@ Puppet::Type.type(:package).provide :conda,
 
   has_feature :installable, :uninstallable, :upgradeable, :versionable
 
-  @install_path = "/opt/anaconda"
-  @conda_cmd    = "#{@install_path}/bin/conda"
-  @env_path     = "#{@install_path}/envs"
-  commands :conda => @conda_cmd
+  def self.is_windows?
+    ENV['OS'] == 'Windows_NT'
+  end
+
+  def self.get_install_path
+    return "C:\\Anaconda" if is_windows?
+    "/opt/anaconda"
+  end
+
+  def self.get_conda_cmd
+    return "#{get_install_path}\\Scripts\\conda.exe" if is_windows?
+    "#{get_install_path}/bin/conda"
+  end
+
+  def self.get_env_path
+    return "#{get_install_path}\\envs" if is_windows?
+    "#{get_install_path}/envs"
+  end
+
+  def self.get_dir_listing_cmd
+    return 'dir /b' if is_windows?
+    'ls -1'
+  end
+
+  commands :conda => get_conda_cmd
 
   @env_delim = "::"
 
-  def self.parse(line, env="")
+  def self.parse_conda_list_item(line, env="")
     # Need a right split, because package names can contain "-"
     package, junk, conda_build = line.rpartition("-")
-
     if not package
       return nil
     end
 
     package_name, junk, version = package.rpartition("-")
-
-    # Add env prefix
     if env != ""
       package_name = "#{env}::#{package_name}"
     end
-    #puts "#{package_name} #{version}"
 
-    # formatted as parameters for provider instantiation
     {:ensure => version, :name => package_name, :provider => name}
   end
 
-  def self.instances
-
+  def self.get_instances_from_conda(env="")
     packages = []
-
-    # bug where conda list gives an error return value
-    execpipe "#{@conda_cmd} list -c || /bin/true" do |process|
+    cmd_line = "#{get_conda_cmd} list -c"
+    if env != ""
+      cmd_line += " -n #{env}"
+    end
+    # This commandlines used to have '|| /bin/true' it may be necesary to introduce a catch block instead.
+    execpipe cmd_line do |process|
       process.collect do |line|
-        next unless options = parse(line)
-        #puts "Storing options: #{options}"
+        next unless options = parse_conda_list_item(line, env)
         packages << new(options)
       end
     end
+    packages
+  end
 
-    # Check for envs
-    execpipe "ls #{@env_path}" do |env_names|
+  def self.instances
+    packages = get_instances_from_conda()
+
+    execpipe "#{get_dir_listing_cmd} #{get_env_path}" do |env_names|
       env_names.collect do |temp_env|
         env = temp_env.strip
-        #puts "Working on env:#{env}<<"
-
-        # bug where conda list gives an error return value
-        execpipe "#{@conda_cmd} list -c -n #{env} || /bin/true" do |process|
-          process.collect do |line|
-            next unless options = parse(line, env)
-            #puts "Storing options: #{options}"
-            packages << new(options)
-          end
-        end
+        env_packages = get_instances_from_conda(env)
+        packages.push(*env_packages)
       end
     end
 
-    #puts packages.inspect
     packages
+  end
+
+  def query
+    self.class.instances.each do |provider_conda|
+      if @resource[:name].downcase == provider_conda.name.downcase
+        return provider_conda.properties
+      end
+    end
+    return nil
   end
 
   def install
@@ -91,33 +112,22 @@ Puppet::Type.type(:package).provide :conda,
     end
 
     if not env.nil?
-      # Verify ENV exists
       found = false
-      execpipe "ls #{@env_path}" do |env_names|
+      execpipe "ls #{self.class.get_env_path}" do |env_names|
         env_names.collect do |temp_env|
           fs_env = temp_env.strip
           if fs_env == env
-            #puts "Found env"
             found = true
             break
           end
         end
       end
 
-      # Don't autocreate envs that don't exist
-      #if not found
-      #    create_args = %w{create --yes --quiet -n}
-      #    create_args << env
-      #    create_args << "python"
-      #    puts "Creating env #{create_args.join(" ")}"
-      #    conda *create_args
-      #end
       if not found
         raise Puppet::Error.new("Package #{resource[:name]} version "\
                                 "#{@resource[:ensure]} is in an error "\
                                 "state: env #{env} does not exist")
       end
-
     end
 
     Puppet.debug "calling >>conda #{args.join(' ')}"
@@ -152,7 +162,7 @@ Puppet::Type.type(:package).provide :conda,
 
     versions = []
     # todo: support other python versions
-    command = "#{@conda_cmd} #{args.join(' ')} || /bin/true"
+    command = "#{self.class.get_conda_cmd} #{args.join(' ')} || /bin/true"
     #puts command
     execpipe command do |process|
       process.collect do |line|
@@ -169,15 +179,6 @@ Puppet::Type.type(:package).provide :conda,
 
   def update
     install
-  end
-
-  def query
-    self.class.instances.each do |provider_conda|
-      if @resource[:name] == provider_conda.name
-        return provider_conda.properties
-      end
-    end
-    return nil
   end
 
   private
