@@ -7,7 +7,6 @@ provider = Puppet::Type.type(:package).provider(:conda)
 describe provider do
 
   before(:all) do
-    # stub out conda executable
   end
 
   before(:each) do
@@ -187,11 +186,125 @@ blz-0.6.2-np19py27_0
 
   describe "when installing" do
 
+    it 'should call conda install' do
+      provider.stubs(:is_windows?).returns true
+      @provider.expects(:execpipe).yields(StringIO.new("bad_env_name\nenv_name\n"))
+      @provider.expects(:conda).with('install','--yes','--quiet','-n','env_name','package_name')
+      @provider.install
+    end
+
+    it 'should throw if env doesn\'t exist' do
+      provider.stubs(:is_windows?).returns true
+      @provider.expects(:execpipe).yields(StringIO.new("bad_env_name\n"))
+      lambda { @provider.install }.should raise_error(Puppet::Error)
+    end
+
+    it 'doesn\'t provide environment if one isn\'t used 1' do
+      @resource = Puppet::Type.type(:package).new(
+        :name     => 'package_name',
+        :ensure   => :present,
+        :provider => :conda,
+      )
+      @provider = provider.new(@resource)
+      provider.stubs(:is_windows?).returns true
+      @provider.expects(:conda).with('install','--yes','--quiet','package_name')
+      @provider.install
+    end
+
+    it 'doesn\'t provide environment if one isn\'t used 2' do
+      @resource = Puppet::Type.type(:package).new(
+        :name     => '::package_name',
+        :ensure   => :present,
+        :provider => :conda,
+      )
+      @provider = provider.new(@resource)
+      provider.stubs(:is_windows?).returns true
+      @provider.expects(:conda).with('install','--yes','--quiet','package_name')
+      @provider.install
+    end
 
   end
 
 
   describe "when uninstalling" do
+
+    it 'should call conda remove' do
+      provider.stubs(:is_windows?).returns true
+      @provider.expects(:conda).with('remove','--yes','-n','env_name','package_name')
+      @provider.uninstall
+    end
+
+    it 'should call conda remove without environment 1' do
+      @resource = Puppet::Type.type(:package).new(
+        :name     => 'package_name',
+        :ensure   => :present,
+        :provider => :conda,
+      )
+      @provider = provider.new(@resource)
+      provider.stubs(:is_windows?).returns true
+      @provider.expects(:conda).with('remove','--yes','package_name')
+      @provider.uninstall
+    end
+
+    it 'should call conda remove without environment 2' do
+      @resource = Puppet::Type.type(:package).new(
+        :name     => '::package_name',
+        :ensure   => :present,
+        :provider => :conda,
+      )
+      @provider = provider.new(@resource)
+      provider.stubs(:is_windows?).returns true
+      @provider.expects(:conda).with('remove','--yes','package_name')
+      @provider.uninstall
+    end
+
+  end
+
+
+  describe "updating" do
+
+    it "same as installing" do
+      @provider.expects(:install).once
+      @provider.update
+    end
+
+  end
+
+
+  describe "ascertaining latest ver" do
+
+    it 'should call conda search with environment' do
+      @provider.expects(:execpipe).with('C:\Anaconda\Scripts\conda.exe search --canonical -n env_name ^package_name$').yields(StringIO.new(
+%q[
+package_name-1.2.2-np19py34_0
+package_name-1.2.3-np19py27_0
+package_name-1.2.3-np19py34_0
+package_name-1.2.2-np19py27_0
+]))
+      @provider.latest.should == "1.2.3"
+    end
+
+    it 'should return nil if no package' do
+      @provider.expects(:execpipe).yields(StringIO.new(""))
+      @provider.latest.should be_nil
+    end
+
+    it 'should call conda search' do
+      @resource = Puppet::Type.type(:package).new(
+        :name     => '::package_name',
+        :ensure   => :present,
+        :provider => :conda,
+      )
+      @provider = provider.new(@resource)
+      @provider.expects(:execpipe).with('C:\Anaconda\Scripts\conda.exe search --canonical ^package_name$').yields(StringIO.new(
+%q[
+package_name-1.2.3-np19py34_0
+package_name-1.2.2-np19py27_0
+package_name-1.2.2-np19py34_0
+package_name-1.2.3-np19py27_0
+]))
+      @provider.latest.should == "1.2.3"
+    end
 
   end
 

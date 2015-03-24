@@ -34,8 +34,6 @@ Puppet::Type.type(:package).provide :conda,
 
   commands :conda => get_conda_cmd
 
-  @env_delim = "::"
-
   def self.parse_conda_list_item(line, env="")
     # Need a right split, because package names can contain "-"
     package, junk, conda_build = line.rpartition("-")
@@ -67,6 +65,47 @@ Puppet::Type.type(:package).provide :conda,
     packages
   end
 
+  private
+  def parse_env(name)
+    env, delim, package = name.partition('::')
+    if delim == ""
+      # If env delim not found, first entry is the package name
+      package = env
+      env = nil
+    elsif env != ""
+      # found env and package
+    else
+      # Overspecified which is valid: "", "::", "packagename"
+      env = nil
+    end
+    [env, package]
+  end
+
+  private
+  def parse_search(line, py_ver_check)
+
+    # Need a right split, because package names can contain "-"
+    package, junk, conda_build = line.rpartition("-")
+    if not package
+      return nil
+    end
+    package_name, junk, version = package.rpartition("-")
+
+    # The conda_build string needs to match the Python version: ie: py27
+    if not conda_build.index(py_ver_check).nil?
+      return version
+    else
+      return nil
+    end
+
+  end
+
+
+  # ##
+  # Package Provider implementation
+  # ##
+
+  public
   def self.instances
     packages = get_instances_from_conda()
 
@@ -81,6 +120,7 @@ Puppet::Type.type(:package).provide :conda,
     packages
   end
 
+  public
   def query
     self.class.instances.each do |provider_conda|
       if @resource[:name].downcase == provider_conda.name.downcase
@@ -90,13 +130,14 @@ Puppet::Type.type(:package).provide :conda,
     return nil
   end
 
+  public
   def install
     args = %w{install --yes --quiet}
 
     env, package = parse_env(@resource[:name])
 
     if not env.nil?
-      args << "-n" 
+      args << "-n"
       args << "#{env}"
     else
       #puts "env:#{env} / package:#{package}"
@@ -129,17 +170,21 @@ Puppet::Type.type(:package).provide :conda,
                                 "state: env #{env} does not exist")
       end
     end
-
-    Puppet.debug "calling >>conda #{args.join(' ')}"
     conda *args
   end
 
+  public
+  def update
+    install
+  end
+
+  public
   def uninstall
     args = %w{remove --yes}
     env, package = parse_env(@resource[:name])
 
     if env != nil
-      args << "-n" 
+      args << "-n"
       args << "#{env}"
     end
 
@@ -147,84 +192,31 @@ Puppet::Type.type(:package).provide :conda,
     conda *args
   end
 
-  # todo - make it work with other python versions
   def latest
-    args  = %w{search -c}
+    args  = %w{search --canonical}
 
-    # Is it in an env?
     env, package = parse_env(@resource[:name])
     if env != nil
-      args << "-n" 
+      args << "-n"
       args << "#{env}"
     end
 
     args << "^#{package}$"
 
     versions = []
-    # todo: support other python versions
-    command = "#{self.class.get_conda_cmd} #{args.join(' ')} || /bin/true"
-    #puts command
+    command = "#{self.class.get_conda_cmd} #{args.join(' ')}"
     execpipe command do |process|
       process.collect do |line|
-        next unless options= parse_search(line)
-        #puts "Storing options: #{options}"
+        next unless options= parse_search(line, "py27")
         versions << options
       end
     end
 
-    #puts versions.inspect
+    return nil if versions.empty?
     # return highest version
     versions.map {|v| Gem::Version.new v}.max.to_s
   end
 
-  def update
-    install
-  end
-
-  private
-  def parse_env(name)
-    # Returns (env, package)
-    # env = nil if it is the root env
-
-    # If env delim not found, first entry is the package name
-    env, delim, package = name.partition(@env_delim)
-    if delim == ""
-      # root package
-      package = env
-      env = nil
-    elsif env != ""
-      # found env and package
-      #puts "env=#{env}, package=#{package}"
-    else
-      # Overspecified which is valid:
-      # "", "::", "packagename"
-      #puts "overspecified #{env}, #{delim}, #{package}"
-      env = nil
-    end
-    [env, package]
-  end
-
-  # Parse searching for latest valid package
-  private
-  def parse_search(line, python="py27")
-
-    # Need a right split, because package names can contain "-"
-    package, junk, conda_build = line.rpartition("-")
-
-    if not package
-      return nil
-    end
-
-    package_name, junk, version = package.rpartition("-")
-
-    # The conda_build string needs to match the Python version: ie: py27
-    if not conda_build.index(python).nil?
-      return version
-    else
-      return nil
-    end
-
-  end
 end
 
 
