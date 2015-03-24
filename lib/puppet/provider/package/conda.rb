@@ -139,8 +139,11 @@ Puppet::Type.type(:package).provide :conda,
     if not env.nil?
       args << "-n"
       args << "#{env}"
-    else
-      #puts "env:#{env} / package:#{package}"
+    end
+
+    if @resource[:source].to_s != ''
+      args << "--channel"
+      args << @resource[:source].to_s
     end
 
     case @resource[:ensure]
@@ -154,7 +157,7 @@ Puppet::Type.type(:package).provide :conda,
 
     if not env.nil?
       found = false
-      execpipe "ls #{self.class.get_env_path}" do |env_names|
+      execpipe "#{self.class.get_dir_listing_cmd} #{self.class.get_env_path}" do |env_names|
         env_names.collect do |temp_env|
           fs_env = temp_env.strip
           if fs_env == env
@@ -199,6 +202,11 @@ Puppet::Type.type(:package).provide :conda,
     if env != nil
       args << "-n"
       args << "#{env}"
+    end
+
+    if @resource[:source].to_s != ''
+      args << "--channel"
+      args << @resource[:source].to_s
     end
 
     args << "^#{package}$"

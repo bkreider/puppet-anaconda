@@ -188,15 +188,28 @@ blz-0.6.2-np19py27_0
 
     it 'should call conda install' do
       provider.stubs(:is_windows?).returns true
-      @provider.expects(:execpipe).yields(StringIO.new("bad_env_name\nenv_name\n"))
+      @provider.expects(:execpipe).with('dir /b C:\\Anaconda\\envs').yields(StringIO.new("bad_env_name\nenv_name\n"))
       @provider.expects(:conda).with('install','--yes','--quiet','-n','env_name','package_name')
       @provider.install
     end
 
     it 'should throw if env doesn\'t exist' do
       provider.stubs(:is_windows?).returns true
-      @provider.expects(:execpipe).yields(StringIO.new("bad_env_name\n"))
+      @provider.expects(:execpipe).with('dir /b C:\\Anaconda\\envs').yields(StringIO.new("bad_env_name\n"))
       lambda { @provider.install }.should raise_error(Puppet::Error)
+    end
+
+    it 'should use channel if source is given' do
+      @resource = Puppet::Type.type(:package).new(
+        :name     => 'package_name',
+        :ensure   => :present,
+        :source   => 'http://server:123/packages/',
+        :provider => :conda,
+      )
+      @provider = provider.new(@resource)
+      provider.stubs(:is_windows?).returns true
+      @provider.expects(:conda).with('install','--yes','--quiet','--channel','http://server:123/packages/','package_name')
+      @provider.install
     end
 
     it 'doesn\'t provide environment if one isn\'t used 1' do
@@ -275,6 +288,24 @@ blz-0.6.2-np19py27_0
 
     it 'should call conda search with environment' do
       @provider.expects(:execpipe).with('C:\Anaconda\Scripts\conda.exe search --canonical -n env_name ^package_name$').yields(StringIO.new(
+%q[
+package_name-1.2.2-np19py34_0
+package_name-1.2.3-np19py27_0
+package_name-1.2.3-np19py34_0
+package_name-1.2.2-np19py27_0
+]))
+      @provider.latest.should == "1.2.3"
+    end
+
+    it 'should add channel if source given' do
+      @resource = Puppet::Type.type(:package).new(
+        :name     => 'env_name::package_name',
+        :ensure   => :present,
+        :source   => 'http://server:123/packages/',
+        :provider => :conda,
+      )
+      @provider = provider.new(@resource)
+      @provider.expects(:execpipe).with('C:\Anaconda\Scripts\conda.exe search --canonical -n env_name --channel http://server:123/packages/ ^package_name$').yields(StringIO.new(
 %q[
 package_name-1.2.2-np19py34_0
 package_name-1.2.3-np19py27_0
