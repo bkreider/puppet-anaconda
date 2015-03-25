@@ -188,14 +188,14 @@ blz-0.6.2-np19py27_0
 
     it 'should call conda install' do
       provider.stubs(:is_windows?).returns true
-      @provider.expects(:execpipe).with('dir /b C:\\Anaconda\\envs').yields(StringIO.new("bad_env_name\nenv_name\n"))
+      provider.expects(:execpipe).with('dir /b C:\\Anaconda\\envs').yields(StringIO.new("bad_env_name\nenv_name\n"))
       @provider.expects(:conda).with('install','--yes','--quiet','-n','env_name','package_name')
       @provider.install
     end
 
     it 'should throw if env doesn\'t exist' do
       provider.stubs(:is_windows?).returns true
-      @provider.expects(:execpipe).with('dir /b C:\\Anaconda\\envs').yields(StringIO.new("bad_env_name\n"))
+      provider.expects(:execpipe).with('dir /b C:\\Anaconda\\envs').yields(StringIO.new("bad_env_name\n"))
       lambda { @provider.install }.should raise_error(Puppet::Error)
     end
 
