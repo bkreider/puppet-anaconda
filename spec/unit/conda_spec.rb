@@ -236,6 +236,18 @@ blz-0.6.2-np19py27_0
       @provider.install
     end
 
+    it 'gives a version when requested' do
+      @resource = Puppet::Type.type(:package).new(
+        :name     => 'package_name',
+        :ensure   => '1.2.3',
+        :provider => :conda,
+      )
+      @provider = provider.new(@resource)
+      provider.stubs(:is_windows?).returns true
+      @provider.expects(:conda).with('install','--yes','--quiet','package_name=1.2.3')
+      @provider.install
+    end
+
   end
 
 

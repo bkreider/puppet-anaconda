@@ -30,7 +30,7 @@
 # Copyright 2013 Continuum Analytics
 #
 class conda (
-    $light_install    = false,
+    $light_install    = true,
     $download_timeout = 1800
 ) {
     include conda::install
