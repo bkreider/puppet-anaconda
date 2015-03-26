@@ -1,7 +1,7 @@
-# Creates an environment with Anaconda, Python, and Numpy
+# Creates an environment with Anaconda
 # To add packages see anaconda::package or use the package provider "conda"
 
-define conda::env(
+define conda::env (
   $env_name = $title,
   $python='2.7',
 ) {
