@@ -1,9 +1,12 @@
 # Creates an environment with Anaconda, Python, and Numpy
 # To add packages see anaconda::package
 
-define conda::package(
-  $env = undef,
-  $ensure = 'present'
+define conda::package (
+
+    $env = undef,
+    $ensure = 'present',
+    $channel = undef
+
 ) {
     include conda
 
@@ -16,8 +19,9 @@ define conda::package(
         $require      = Conda::Env[$env]
     }
 
-    package {$package_name:
+    package { $package_name :
         ensure   => $ensure,
+        source   => $channel,
         require  => $require,
         provider => conda
     }
