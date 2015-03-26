@@ -8,7 +8,7 @@
 # Document parameters here.
 #
 # [*light_install*]
-#   Defaults to false.  If set to true, a bare-bones python
+#   Defaults to true.  If set to false, a bare-bones python
 #   distribution will be installed using miniconda.
 #
 # [*download_timeout*]
@@ -30,7 +30,7 @@
 # Copyright 2013 Continuum Analytics
 #
 class conda (
-    $light_install    = false,
+    $light_install    = true,
     $download_timeout = 1800
 ) {
     include conda::install

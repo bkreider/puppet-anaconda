@@ -1,7 +1,9 @@
 
-package { 'test_env::pip' :
-  ensure          => 'latest',
-  source          => 'http://conda.rep.os/',
-  provider        => 'conda',
+include conda
+
+conda::package { 'numpy' :
+  env     => 'test_env',
+  channel => 'http://engbuildserver/conda/repo',
 }
+conda::env { 'test_env' : }
 

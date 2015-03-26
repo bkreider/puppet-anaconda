@@ -117,7 +117,7 @@ Puppet::Type.type(:package).provide :conda,
 
         case @resource[:ensure]
         when String
-            args << "#{package}==#{@resource[:ensure]}"
+            args << "#{package}=#{@resource[:ensure]}"
         when :latest
             args << package
         else

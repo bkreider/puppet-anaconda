@@ -1,6 +1,3 @@
-# Creates an environment with Anaconda, Python, and Numpy
-# To add packages see anaconda::package or use the package provider "conda"
-
 define conda::condarc(
     $channels = ['http://repo.continuum.io/pkgs/pro', 'http://repo.continuum.io/pkgs/free'],
     $proxy = undef

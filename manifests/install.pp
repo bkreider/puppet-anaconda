@@ -3,9 +3,10 @@
 # Internal class that does the installation work
 class conda::install {
     include conda::params
+    include staging::params
 
-    # Light install uses the miniconda installer
     if $conda::light_install {
+        # Light install uses the miniconda installer
         $source    = $conda::params::url
         $installer = $conda::params::installer
     }
@@ -15,25 +16,28 @@ class conda::install {
         $installer = $conda::params::anaconda_installer
     }
 
-    $dl_dir         = '/tmp'
-    $installer_path = "${dl_dir}/conda/${installer}"
+    $installer_path = $::kernel ? {
+        /(L|l)inux/   => "${staging::params::path}/conda/${installer}",
+        'windows'     => "${staging::params::path}\\conda\\${installer}",
+        default       => 'FAIL'
+    }
     $install_dir    = $conda::params::install_dir
 
-    class {'staging':
-        path  => $dl_dir,
-        owner => 'puppet',
-        group => 'puppet',
+    $installer_exec = $::kernel ? {
+        /(L|l)inux/   => "/bin/bash ${installer_path} -b -p ${install_dir}",
+        'windows'     => "${installer_path} /S /D=${install_dir}",
+        default       => 'FAIL'
     }
 
     # Only download once
-    staging::file {$installer:
+    staging::file { $installer :
         source  => $source,
         timeout => $conda::download_timeout
     }
 
     # Only install if downloaded file changed
     exec { 'conda_install':
-        command   => "/bin/bash ${installer_path} -b -p ${install_dir}",
+        command   => $installer_exec,
         creates   => $install_dir,
         subscribe => Staging::File[$installer],
     }
