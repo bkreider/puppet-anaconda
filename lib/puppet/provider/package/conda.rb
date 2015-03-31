@@ -113,6 +113,7 @@ Puppet::Type.type(:package).provide :conda,
         if @resource[:source].to_s != ''
             args << "--channel"
             args << @resource[:source].to_s
+            args << "--override-channels"
         end
 
         case @resource[:ensure]
@@ -163,6 +164,7 @@ Puppet::Type.type(:package).provide :conda,
         if @resource[:source].to_s != ''
             args << "--channel"
             args << @resource[:source].to_s
+            args << "--override-channels"
         end
 
         args << "^#{package}$"

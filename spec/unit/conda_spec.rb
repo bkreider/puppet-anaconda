@@ -208,7 +208,7 @@ blz-0.6.2-np19py27_0
       )
       @provider = provider.new(@resource)
       provider.stubs(:is_windows?).returns true
-      @provider.expects(:conda).with('install','--yes','--quiet','--channel','http://server:123/packages/','package_name')
+      @provider.expects(:conda).with('install','--yes','--quiet','--channel','http://server:123/packages/','--override-channels','package_name')
       @provider.install
     end
 
@@ -317,7 +317,7 @@ package_name-1.2.2-np19py27_0
         :provider => :conda,
       )
       @provider = provider.new(@resource)
-      @provider.expects(:execpipe).with('C:\Anaconda\Scripts\conda.exe search --canonical -n env_name --channel http://server:123/packages/ ^package_name$').yields(StringIO.new(
+      @provider.expects(:execpipe).with('C:\Anaconda\Scripts\conda.exe search --canonical -n env_name --channel http://server:123/packages/ --override-channels ^package_name$').yields(StringIO.new(
 %q[
 package_name-1.2.2-np19py34_0
 package_name-1.2.3-np19py27_0
