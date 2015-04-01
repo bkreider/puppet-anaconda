@@ -31,7 +31,8 @@
 #
 class conda (
     $light_install    = true,
-    $download_timeout = 1800
+    $download_timeout = 1800,
+    $channel          = undef,
 ) {
     include conda::install
 }

@@ -5,10 +5,9 @@ define conda::package (
 
     $env = undef,
     $ensure = 'present',
-    $channel = undef
 
 ) {
-    include conda
+    require conda
 
     if $env == undef {
         $package_name = $title
@@ -21,7 +20,7 @@ define conda::package (
 
     package { $package_name :
         ensure   => $ensure,
-        source   => $channel,
+        source   => $conda::channel,
         require  => $require,
         provider => conda
     }

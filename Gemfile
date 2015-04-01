@@ -25,6 +25,8 @@ gem 'rspec'
 gem 'rspec-core'
 gem 'rspec-expectations'
 gem 'rspec-mocks'
+gem 'rspec-puppet'
+gem 'ffi'
 gem 'minitest', '~> 5.0.0'
 
 # https://github.com/freerange/mocha#bundler
