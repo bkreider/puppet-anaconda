@@ -1,5 +1,5 @@
 class { 'conda' :
-  channel => 'http://engbuildserver/conda/repo',
+  channel => 'http://local-package-server/conda/repo',
 }
 
 conda::env { 'test_env' : }
