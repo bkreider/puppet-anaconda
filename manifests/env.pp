@@ -1,23 +1,25 @@
-# Creates an environment with Anaconda, Python, and Numpy
+# Creates an environment with Anaconda
 # To add packages see anaconda::package or use the package provider "conda"
 
-define conda::env( $anaconda_version=undef, $numpy='1.7', $python='2.7') {
+define conda::env (
+    $env_name = $title,
+    $python = '2.7',
+) {
+    require conda
     include conda::params
 
-    $conda = "${conda::params::base_path}/bin/conda"
+    $conda = $conda::params::conda_exe
+    $channel = $conda::channel
 
-    if $anaconda_version == undef {
-        $anaconda_string = 'anaconda'
-    }
-    else {
-        $anaconda_string = "anaaconda=${anaconda_version}"
+    if $channel == undef {
+        $command = "${conda} create --yes --quiet -n ${env_name} python=${python}"
+    } else {
+        $command = "${conda} create --yes --quiet --channel ${channel} --override-channels -n ${env_name} python=${python}"
     }
 
-    exec { "conda_env_${name}":
-        command => "${conda} create --yes --quiet \
-                    --name=${name} ${anaconda_string} numpy=${numpy} \
-                    python=${python}",
-        creates => "${conda::params::base_path}/envs/${name}",
+    exec { "conda_env_${env_name}":
+        command => $command,
+        creates => "${conda::params::install_dir}/envs/${env_name}",
         require => Class[conda],
         timeout => 600,
 
@@ -25,9 +27,10 @@ define conda::env( $anaconda_version=undef, $numpy='1.7', $python='2.7') {
     # run env commands before installing packages
 
     # Make sure pip is installed
-    package {'pip':
+    package { 'pip' :
         ensure   => present,
-        require  => Exec["conda_env_${name}"],
-        provider => conda
+        require  => Exec["conda_env_${env_name}"],
+        provider => conda,
+        source   => $channel,
     }
 }
