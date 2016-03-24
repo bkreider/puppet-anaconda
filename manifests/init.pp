@@ -33,6 +33,7 @@ class conda (
     $light_install    = true,
     $download_timeout = 1800,
     $channel          = undef,
+    $version          = '2.5.0',
 ) {
     include conda::install
 }
