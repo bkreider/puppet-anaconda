@@ -5,7 +5,7 @@ define conda::condarc(
     require conda
     include conda::params
 
-    file { "${conda::params::base_path}/.condarc":
+    file { "${conda::params::install_dir}/.condarc":
         content => template('conda/condarc.erb'),
     } ->  Package <| provider == conda or provider == conda_pip |>
 }
