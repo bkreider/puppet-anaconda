@@ -2,7 +2,7 @@
 #
 # Internal class for setting up parameters
 class conda::params {
-
+ 
     $install_dir = $::kernel ? {
         'windows'     => 'C:\Anaconda',
         /(L|l)inux/   => '/opt/anaconda',
@@ -16,23 +16,21 @@ class conda::params {
     }
 
     $base_url = 'http://repo.continuum.io/miniconda'
-    #$base_url = 'http://local-package-server/Files'
 
     # Some versions of puppet report uppercase Linux
     $installer = $::kernel ? {
-        /(L|l)inux/   => 'Miniconda-latest-Linux-x86_64.sh',
-        'windows'     => 'Miniconda-latest-Windows-x86_64.exe',
+        /(L|l)inux/   => "Miniconda${conda::py_version}-${conda::version}-Linux-x86_64.sh",
+        'windows'     => "Miniconda${conda::py_version}-${conda::version}-Windows-x86_64.exe",
         default       => 'FAIL'
     }
     $url = "${base_url}/${installer}"
 
     # Anaconda URLS
-    $anaconda_base_url = 'http://09c8d0b2229f813c1b93-c95ac804525aac4b6dba79b00b39d1d3.r79.cf1.rackcdn.com'
-    #$anaconda_base_url = 'http://local-package-server/Files'
+    $anaconda_base_url = 'http://repo.continuum.io/archive'
 
     $anaconda_installer = $::kernel ? {
-        /(L|l)inux/ => "Anaconda-${conda::version}-Linux-x86_64.sh",
-        'windows'   => "Anaconda-${conda::version}-Windows-x86_64.exe",
+        /(L|l)inux/ => "Anaconda${conda::py_version}-${conda::version}-Linux-x86_64.sh",
+        'windows'   => "Anaconda${conda::py_version}-${conda::version}-Windows-x86_64.exe",
         default     => 'FAIL'
     }
 

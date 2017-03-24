@@ -14,6 +14,13 @@
 # [*download_timeout*]
 #   Defaults to 30 minutes.  The time to wait for the installer to download
 #
+# [*py_version*]
+#   Specify Python version for the root env.  Default is Python3.
+#
+# [*version*]
+#   Specify Anaconda version. Miniconda (light_install) supports 'latest'.  
+#   Full Anaconda install requires specific version number.
+#
 # === Examples
 #
 #  include conda
@@ -33,7 +40,8 @@ class conda (
     $light_install    = true,
     $download_timeout = 1800,
     $channel          = undef,
-    $version          = '2.5.0',
+    $py_version       = '3',
+    $version          = '4.3.1',
 ) {
     include conda::install
 }
