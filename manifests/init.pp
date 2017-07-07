@@ -21,6 +21,8 @@
 #   Specify Anaconda version. Miniconda (light_install) supports 'latest'.  
 #   Full Anaconda install requires specific version number.
 #
+# [*umask*]
+#   Specify umask to use for the installation process of Anaconda.  
 # === Examples
 #
 #  include conda
@@ -42,6 +44,7 @@ class conda (
     $channel          = undef,
     $py_version       = '3',
     $version          = '4.3.1',
+    $umask	          = '0022',
 ) {
     include conda::install
 }

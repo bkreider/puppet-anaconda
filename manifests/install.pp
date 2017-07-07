@@ -40,5 +40,6 @@ class conda::install {
         command   => $installer_exec,
         creates   => $install_dir,
         subscribe => Staging::File[$installer],
+	    umask 	  => $umask,
     }
 }
